@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SafeBite 🍽️
 
-## Getting Started
+**SafeBite** is a privacy-first, fully local AI meal planner built for the Hacktoberfest "Build for a Friend" Weekend Challenge. 
 
-First, run the development server:
+Powered by **Gemma 2 (2B)** via Ollama, SafeBite allows users with strict dietary restrictions (like Celiac disease or severe peanut allergies) to input their pantry ingredients and safely generate recipes. The AI relies on strict deterministic prompting to avoid cross-contamination and hallucinated ingredients, ensuring user safety without ever sending medical data to a cloud API.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Tech Stack
+* **Frontend:** Next.js (App Router), React, Tailwind CSS
+* **Backend:** Next.js API Routes, `ollama` SDK
+* **AI Model:** Google Gemma 2 (2B) running locally
+* **Data Storage:** Browser `localStorage` (Privacy-first profiles)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🧪 Demo Data for Testing
+If you want to test the AI's guardrails, try copy-pasting the following profiles and pantries into the application.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Demo 1: The Hidden Gluten Trap
+* **Condition / Name:** Celiac Disease
+* **Target Allergens:** Gluten, Wheat, Barley, Rye
+* **Strictness Rules:** Strict zero cross-contamination.
+* **Pantry Input:** `Chicken breast, white rice, broccoli, traditional soy sauce, olive oil`
+* **Expected AI Behavior:** The AI should explicitly flag the traditional soy sauce (which contains wheat) and substitute it with Tamari, while recognizing that chicken, rice, and broccoli are naturally safe.
 
-## Learn More
+### Demo 2: The Dairy Mix-Up
+* **Condition / Name:** Severe Lactose Intolerance
+* **Target Allergens:** Dairy, Milk, Cheese, Butter
+* **Strictness Rules:** No dairy products whatsoever.
+* **Pantry Input:** `Pasta, ground beef, tomato sauce, mayonnaise, parmesan cheese`
+* **Expected AI Behavior:** The AI must omit or substitute the parmesan cheese. Crucially, because of our strict negative constraints, it should *recognize that mayonnaise is safe* (eggs/oil) and not mistakenly classify it as dairy.
 
-To learn more about Next.js, take a look at the following resources:
+### Demo 3: Tree Nut & Peanut Guardrails
+* **Condition / Name:** Nut Allergy
+* **Target Allergens:** Peanuts, Tree Nuts, Almonds, Cashews
+* **Strictness Rules:** Trace amounts are dangerous.
+* **Pantry Input:** `Rolled oats, almond milk, strawberries, honey, chia seeds`
+* **Expected AI Behavior:** The AI will flag the almond milk as dangerous and substitute it with oat milk, water, or another safe alternative to make a safe oatmeal dish.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ How to Run Locally
 
-## Deploy on Vercel
+1. **Start the AI Server:**
+   Ensure you have [Ollama](https://ollama.com/) installed and running on your machine.
+   ```bash
+   ollama pull gemma2:2b
+   ollama run gemma2:2b
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. **Start the Application:**
+   Open a new terminal and run:
+   ```bash
+   npm install
+   npm run dev
+   ```
+   Then navigate to `http://localhost:3000` in your browser.
