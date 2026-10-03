@@ -9,6 +9,7 @@ This project was built for the DevRelay Hacktoberfest challenge. We used four sp
 * **Microsoft Azure:** We provisioned a custom `Standard_D2as_v4` Virtual Machine to host our own independent AI backend.
 * **Gemma:** We deployed `gemma2:2b` via Ollama on the Azure server. It handles the strict zero-shot recipe generation without the rate limits of 3rd-party APIs.
 * **ElevenLabs:** We wired up the text-to-speech API so users can click a button and listen to the recipes out loud.
+* **MongoDB Atlas:** Powers the database to securely store user allergen profiles and their personal Cookbook of saved recipes.
 * **Render:** We deployed the Next.js frontend to the live web.
 
 ## The Architecture
