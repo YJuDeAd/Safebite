@@ -133,22 +133,26 @@ export default function Home() {
   const parseResponse = (text: string) => {
     if (!text) return { safetyCheck: "", recipes: [] };
     
-    // Clean up indentations that cause markdown code blocks
     const cleanText = text.split('\n').map(line => line.trimStart()).join('\n');
     
-    // Try splitting by standard ## or # headers
+    // Check if the AI actually generated a safety audit
+    const hasSafetyAudit = cleanText.toLowerCase().includes("safety") || cleanText.toLowerCase().includes("allergen");
+    
     let chunks = cleanText.split(/(?=^##?\s+)/m);
     
     if (chunks.length <= 1) {
-      // Fallback: look for bold "Recipe" or just "Ingredients:"
       const parts = cleanText.split(/(?=\n\*\*Recipe|\nIngredients:)/im);
       if (parts.length > 1) {
         chunks = [parts[0], parts.slice(1).join('\n')];
       }
     }
 
-    if (chunks.length <= 1) {
-      return { safetyCheck: chunks[0], recipes: [] };
+    // If it STILL couldn't split, or if there's clearly no safety audit, treat the WHOLE thing as a Recipe!
+    if (chunks.length <= 1 || !hasSafetyAudit) {
+      return { 
+        safetyCheck: "", // Hide the safety audit box entirely
+        recipes: [{ title: "Generated Recipe", content: cleanText }] 
+      };
     }
     
     const safetyCheck = chunks[0];
