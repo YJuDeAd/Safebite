@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Utensils, BookOpen, ShieldCheck, User, Sparkles, Loader2, Check, Save, LogOut } from "lucide-react";
+import { Utensils, BookOpen, ShieldCheck, User, Sparkles, Loader2, Check, Save, LogOut, Volume2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Profile {
@@ -29,6 +29,9 @@ export default function Home() {
   
   const [savingRecipes, setSavingRecipes] = useState<Set<string>>(new Set());
   const [savedRecipes, setSavedRecipes] = useState<Set<string>>(new Set());
+  
+  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -129,16 +132,58 @@ export default function Home() {
 
   const parseResponse = (text: string) => {
     if (!text) return { safetyCheck: "", recipes: [] };
-    const chunks = text.split(/(?=^#+\s)/m);
-    if (chunks.length <= 1) return { safetyCheck: chunks[0], recipes: [] };
+    
+    // Clean up indentations that cause markdown code blocks
+    const cleanText = text.split('\n').map(line => line.trimStart()).join('\n');
+    
+    // Try splitting by standard ## or # headers
+    let chunks = cleanText.split(/(?=^##?\s+)/m);
+    
+    if (chunks.length <= 1) {
+      // Fallback: look for bold "Recipe" or just "Ingredients:"
+      const parts = cleanText.split(/(?=\n\*\*Recipe|\nIngredients:)/im);
+      if (parts.length > 1) {
+        chunks = [parts[0], parts.slice(1).join('\n')];
+      }
+    }
+
+    if (chunks.length <= 1) {
+      return { safetyCheck: chunks[0], recipes: [] };
+    }
     
     const safetyCheck = chunks[0];
-    const recipes = chunks.slice(1).map(chunk => {
-      const titleMatch = chunk.match(/^#+\s*(.*)/);
-      const title = titleMatch ? titleMatch[1].trim() : `Recipe - ${new Date().toLocaleDateString()}`;
+    const recipes = chunks.slice(1).map((chunk, i) => {
+      const titleMatch = chunk.match(/^##?\s+(.*)/) || chunk.match(/^\*\*(.*?)\*\*/);
+      let title = titleMatch ? (titleMatch[1] || titleMatch[2]).trim() : `Generated Recipe ${i+1}`;
+      if (title.toLowerCase().includes("ingredient")) title = `Recipe ${i+1}`;
       return { title, content: chunk.trim() };
     });
+    
     return { safetyCheck, recipes };
+  };
+
+  const playRecipeAudio = async (title: string, content: string) => {
+    try {
+      setAudioLoading(title);
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: content.substring(0, 4999) }) // ElevenLabs limits text length
+      });
+      if (!res.ok) throw new Error("TTS failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      setPlayingAudio(title);
+      audio.onended = () => setPlayingAudio(null);
+      await audio.play();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to play audio. Check API key and quota.");
+      setPlayingAudio(null);
+    } finally {
+      setAudioLoading(null);
+    }
   };
 
   if (!isLoaded || status === "loading") {
@@ -327,7 +372,20 @@ export default function Home() {
                             </ReactMarkdown>
                           </div>
                           
-                          <div className="pt-6 flex justify-end">
+                          <div className="pt-6 flex justify-end gap-4">
+                            <button
+                              onClick={() => playRecipeAudio(rec.title, rec.content)}
+                              disabled={audioLoading === rec.title || playingAudio === rec.title}
+                              className="py-4 px-8 rounded-full font-bold transition-transform flex items-center gap-3 text-lg bg-[#e8e1d7] hover:bg-[#d8d1c7] dark:bg-[#444] dark:hover:bg-[#555] text-[#3b2444] dark:text-white hover:-translate-y-1 disabled:opacity-50"
+                            >
+                              {audioLoading === rec.title ? (
+                                <><Loader2 className="w-5 h-5 animate-spin" /> Loading Audio</>
+                              ) : playingAudio === rec.title ? (
+                                <><Volume2 className="w-5 h-5 animate-pulse text-[#ff4d29]" /> Playing...</>
+                              ) : (
+                                <><Volume2 className="w-5 h-5" /> Listen</>
+                              )}
+                            </button>
                             <button
                               onClick={() => saveRecipeToCookbook(rec.title, rec.content)}
                               disabled={savingRecipes.has(rec.title) || savedRecipes.has(rec.title)}

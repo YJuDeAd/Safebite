@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import ollama from 'ollama';
+import { Ollama } from 'ollama';
 import { z } from 'zod';
 
 const RequestSchema = z.object({
@@ -70,8 +70,10 @@ Allergen Safety Check:
     const guardrailWarnings = runGuardrail(pantry, profile.allergies);
     const userPrompt = `My pantry has: ${pantry}. What can I make? ${guardrailWarnings}`;
 
-    // Connect to local Ollama running gemma2:2b
-    const response = await ollama.chat({
+    // Connect to Ollama (local or DigitalOcean Droplet)
+    const ollamaClient = new Ollama({ host: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434' });
+
+    const response = await ollamaClient.chat({
       model: 'gemma2:2b',
       messages: [
         { role: 'system', content: systemPrompt },

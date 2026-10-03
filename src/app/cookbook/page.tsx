@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { BookOpen, ArrowLeft, Loader2 } from "lucide-react";
+import { BookOpen, ArrowLeft, Loader2, Volume2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Recipe {
@@ -19,6 +19,32 @@ export default function Cookbook() {
   const { data: session, status } = useSession();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState<string | null>(null);
+
+  const playRecipeAudio = async (title: string, content: string) => {
+    try {
+      setAudioLoading(title);
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: content.substring(0, 4999) })
+      });
+      if (!res.ok) throw new Error("TTS failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      setPlayingAudio(title);
+      audio.onended = () => setPlayingAudio(null);
+      await audio.play();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to play audio. Check API key and quota.");
+      setPlayingAudio(null);
+    } finally {
+      setAudioLoading(null);
+    }
+  };
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -101,6 +127,22 @@ export default function Cookbook() {
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {recipe.content.replace(/^#+\s.*?\n/m, '') /* Strip the title from markdown since we render it above */}
                   </ReactMarkdown>
+                </div>
+
+                <div className="pt-6 flex justify-end">
+                  <button
+                    onClick={() => playRecipeAudio(recipe.title, recipe.content)}
+                    disabled={audioLoading === recipe.title || playingAudio === recipe.title}
+                    className="py-4 px-8 rounded-full font-bold transition-transform flex items-center gap-3 text-lg bg-[#f2ede6] hover:bg-[#e8e1d7] dark:bg-[#333] dark:hover:bg-[#444] text-[#3b2444] dark:text-white hover:-translate-y-1 disabled:opacity-50"
+                  >
+                    {audioLoading === recipe.title ? (
+                      <><Loader2 className="w-5 h-5 animate-spin" /> Loading Audio</>
+                    ) : playingAudio === recipe.title ? (
+                      <><Volume2 className="w-5 h-5 animate-pulse text-[#ff4d29]" /> Playing...</>
+                    ) : (
+                      <><Volume2 className="w-5 h-5" /> Listen</>
+                    )}
+                  </button>
                 </div>
               </article>
             ))}

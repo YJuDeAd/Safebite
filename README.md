@@ -25,7 +25,7 @@ If you want to test the application, copy these profiles and pantries into the i
 * **Condition:** Severe Lactose Intolerance
 * **Allergens:** Dairy, Milk, Cheese, Butter
 * **Strictness:** No dairy products.
-* **Pantry:** Pasta, ground beef, tomato sauce, mayonnaise, parmesan cheese
+* **Pantry:** Pasta, tomato sauce, mayonnaise, parmesan cheese
 * **Expected result:** The AI omits the parmesan. By injecting explicit negative constraints, we force the model to recognize that mayonnaise is safe (eggs/oil) instead of lazily dropping it as dairy.
 
 ### Demo 3: Tree Nut & Peanut Guardrails
