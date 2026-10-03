@@ -1,51 +1,48 @@
 # SafeBite
 
-SafeBite is a meal planner for people with strict food allergies. It runs Google Gemma 2 locally through Ollama to generate recipes based on what you have in your kitchen, while rigidly filtering out dangerous ingredients.
+A strict, zero-hallucination allergen-safe recipe generator. 
 
-Most AI recipe generators hallucinate safe status for hidden allergens or ignore cross-contamination rules. SafeBite handles this with a hardcoded RAG guardrail. It intercepts your pantry list, checks the items against an offline dictionary, and injects strict override warnings before the LLM ever sees the prompt. Your medical profile is securely synced via MongoDB and Google OAuth.
+## Hacktoberfest 2026
 
-## Tech Stack
-* Frontend: Next.js App Router, Tailwind CSS v4
-* Backend: Next.js API Routes, NextAuth (Google Provider), Mongoose
-* Database: MongoDB Atlas
-* AI: Google Gemma 2 (2B) via Ollama
+This project was built for the DevRelay Hacktoberfest challenge. We used four sponsor technologies to build the final production MVP:
 
-## Testing the Guardrails
+* **Microsoft Azure:** We provisioned a custom `Standard_D2as_v4` Virtual Machine to host our own independent AI backend.
+* **Gemma:** We deployed `gemma2:2b` via Ollama on the Azure server. It handles the strict zero-shot recipe generation without the rate limits of 3rd-party APIs.
+* **ElevenLabs:** We wired up the text-to-speech API so users can click a button and listen to the recipes out loud.
+* **Render:** We deployed the Next.js frontend to the live web.
 
-If you want to test the application, copy these profiles and pantries into the input fields.
+## The Architecture
 
-### Demo 1: The Hidden Gluten Trap
-* **Condition:** Celiac Disease
-* **Allergens:** Gluten, Wheat, Barley, Rye
-* **Strictness:** Strict zero cross-contamination.
-* **Pantry:** Chicken breast, white rice, broccoli, traditional soy sauce, olive oil
-* **Expected result:** The guardrail catches the traditional soy sauce (which contains wheat) and forces the AI to substitute it with Tamari.
+Off-the-shelf APIs failed us. When dealing with severe food allergies like Celiac disease, hallucinating an ingredient is a critical failure. Early tests with 3rd-party hosted endpoints returned constant 500 errors and unpredictable markdown formatting. 
 
-### Demo 2: The Dairy Mix-Up
-* **Condition:** Severe Lactose Intolerance
-* **Allergens:** Dairy, Milk, Cheese, Butter
-* **Strictness:** No dairy products.
-* **Pantry:** Pasta, tomato sauce, mayonnaise, parmesan cheese
-* **Expected result:** The AI omits the parmesan. By injecting explicit negative constraints, we force the model to recognize that mayonnaise is safe (eggs/oil) instead of lazily dropping it as dairy.
+We pivoted to hosting our own infrastructure. The Next.js frontend sends strict prompts directly to our Azure Virtual Machine. That server runs Ollama with the `gemma2:2b` model. Because the 2B model is small enough to run fast on a CPU instance, we get lightning-fast inference without paying for a GPU. 
 
-### Demo 3: Tree Nut & Peanut Guardrails
-* **Condition:** Nut Allergy
-* **Allergens:** Peanuts, Tree Nuts, Almonds, Cashews
-* **Strictness:** Trace amounts are dangerous.
-* **Pantry:** Rolled oats, almond milk, strawberries, honey, chia seeds
-* **Expected result:** The AI flags the almond milk and substitutes oat milk or water.
+We also built a custom fallback parser in the Next.js UI. If the smaller 2B model forgets to format its markdown headers properly, the frontend catches the mistake and renders the recipe card cleanly anyway.
 
 ## Local Setup
 
-1. **Configure your environment.** Copy `.env.example` to `.env.local` and add your MongoDB connection string and Google OAuth client credentials.
-2. **Start the local LLM.** Install [Ollama](https://ollama.com/), then pull the model:
-   ```bash
-   ollama pull gemma2:2b
-   ollama serve
-   ```
-3. **Start the Next.js app.**
-   ```bash
-   npm install
-   npm run dev
-   ```
-   Open `http://localhost:3000` to use the planner.
+To run this project locally, you need your own Azure VM running Ollama, and an ElevenLabs API key.
+
+1. Clone the repository and install dependencies:
+```bash
+npm install
+```
+
+2. Create a `.env.local` file in the root directory and add your keys:
+```env
+# Your Azure Virtual Machine IP address and the open Ollama port
+OLLAMA_HOST="http://<YOUR_AZURE_IP>:11434"
+
+# ElevenLabs API Key for text-to-speech
+ELEVENLABS_API_KEY="your_api_key_here"
+
+# A random string for local NextAuth testing
+NEXTAUTH_SECRET="secret"
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view the app.
